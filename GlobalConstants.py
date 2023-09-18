@@ -16,6 +16,12 @@ __doc__        = "CONSTANTS for Llama2 and Falcon MammothGPT LLM's"
 
 TODO = -1 
 
+NVIDIA_INFO_COMMAND = "nvidia-smi"
+CPU_TEMP_COMMAND = "cat /sys/class/thermal/thermal_zone*/temp"
+
+PARCEL_ID_ROW = 0
+PARCEL_ADDRESS_ROW = 1
+
 PRIMARY_KEY_COLUMN_NUMBER = 0
 CONTECT_COLUMN_NUMBER = 1
 URL_COLUMN_NUMBER = 2
@@ -45,16 +51,24 @@ FLORIDA_COUNTIES =  ["Alachua", "Baker", "Bay", "Bradford", "Brevard", "Broward"
 
 COUNTY_PROPERTY_WEBSITES = {}
 
-https://www.qpublic.net/fl/jackson/search.html
+STATES ={
+        "AL" : "Alabama", "AK" : "Alaska", "Az" : "Arizona", "AR" : "Arkansas", "CA" : "California", "CO" : "Colorado", "CT" : "Connecticut", "DE" : "Delaware", "FL" : "Florida", "GA" : "Georgia",
+        "HI" : "Hawaii", "ID" : "Idaho", "IL" : "Illinois", "IN" : "Indiana", "IA" : "Iowa", "KS" : "Kansas", "KY" : "Kentucky", "LA" : "Louisiana", "ME" : "Maine", "MD" : "Maryland", "MA" : "Massachusetts",
+        "MI" : "Michigan", "MN" : "Minnesota", "MS" : "Mississippi", "MO" : "Missouri", "MT" : "Montana", "NE" : "Nebraska", "NV" : "Nevada", "NH" : "New Hampshire", "NJ" : "New Jersey", "NM" : "New Mexico",
+        "NY" : "New York", "NC" : "North Carolina", "ND" : "North Dakota", "OH" : "Ohio", "OK" : "Oklahoma", "OR" : "Oregon", "PA" : "Pennsylvania", "RI" : "Rhode Island", "SC" : "South Carolina", 
+        "SD" : "South Dakota", "TN" : "Tennessee", "TX" : "Texas", "UT" : "Utah", "VT" : "Vermont", "VA" : "Virginia", "WA" : "Washington", "WV" : "West Virginia", "WI" : "Wisconsin", "WY" : "Wyoming"
+        }
 
-https://beacon.schneidercorp.com
+# https://www.qpublic.net/fl/jackson/search.html
+
+# https://beacon.schneidercorp.com
 
 # Florida & Jackson          https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=2&PageID=7081
 # Florida & Jefferson County https://beacon.schneidercorp.com/Application.aspx?AppID=866&LayerID=16381&PageTypeID=2&PageID=7226
 
 # The folllowing two are equal when searching for 01-2N-10-0000-0020-0020
-https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=4&PageID=13353&Q=435552219&KeyValue=01-2N-10-0000-0020-0020
-https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=4&PageID=13353&KeyValue=01-2N-10-0000-0020-0020
+#https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=4&PageID=13353&Q=435552219&KeyValue=01-2N-10-0000-0020-0020
+#https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=4&PageID=13353&KeyValue=01-2N-10-0000-0020-0020
 
 # If a parcel ID does not exist like 01-2N-10-0000-0010-0001  
 #https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=3&PageID=7082&Q=1127906194

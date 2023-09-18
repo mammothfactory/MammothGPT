@@ -27,6 +27,8 @@ from typing import Optional
 # Internal modules
 import GlobalConstants as GC
 
+from ParcelId import ParcelId
+
 
 class Database:
     
@@ -35,16 +37,50 @@ class Database:
     """ Store non-Personally Identifiable Information in SQLite database
     """
 
-    def __init__(self):
-        """ Constructor to initialize an Database object
+    def __init__(self, dbName='MammothGPT.db'):
+        """ Constructor to initialize a MammothGPT Database object
+            Call db = Database('Test.db') for testing
+        
+        Args:
+            dbName (String): Filename of SQlite database, defaults to 'House.db'   
         """
         # Connect to the database (create if it doesn't exist)
-        self.conn = sqlite3.connect('MammothGPT.db')
+        self.conn = sqlite3.connect(dbName)
+        self.conn.execute("PRAGMA foreign_keys = ON")
+        
         self.cursor = self.conn.cursor()
 
         # Create TODO tables in TimeReport.db for user name and time logging data storage
         # content (string), url (string), timestamp (datetime), dump (string), segment (string), image_urls (list of list [[string, string]])
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS DataSetTable (id INTEGER PRIMARY KEY, content TEXT, url TEXT, timestamp TEXT, dump TEXT, segment TEXT, image_urls TEXT)''')
+        
+        qPublicQuery = (''' CREATE TABLE IF NOT EXISTS QPublicRecord (
+                            id                  INTEGER     PRIMARY KEY,
+                            urlPageID           INTEGER     NOT NULL,
+                            owner_info_id       INTEGER     NOT NULL,
+                            parcel_summary_id   INTEGER     NOT NULL,
+                            FOREIGN KEY (owner_info_id)     REFERENCES OwnerInfoTable(id),
+                            FOREIGN KEY (parcel_summary_id) REFERENCES ParcelSummaryTable(id)
+                            )''')
+        
+        self.cursor.execute(qPublicQuery)
+        
+        # https://www.transportation.gov/sites/dot.gov/files/docs/mission/gis/national-address-database/308816/nad-schema-v1.pdf
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS OwnerInfoTable (id INTEGER PRIMARY KEY, contactName TEXT, streetAddress TEXT, city TEXT, county TEXT, state CHAR(2), postalCode INTEGER)''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS ParcelSummaryTable (id INTEGER PRIMARY KEY, parcelId TEXT, description TEXT, propertyUseCode TEXT, acreage REAL, homestead CHAR(1))''')
+        #TODO self.cursor.execute('''CREATE TABLE IF NOT EXISTS SalesTable (id INTEGER PRIMARY KEY, saleDate TEXT, salePrice INTEGER, qualification CHAR(1),  vacant CHAR(1),  grantor TEXT,  grantee TEXT)''')
+        #TODO self.cursor.execute('''CREATE TABLE IF NOT EXISTS ValuationTable (id INTEGER PRIMARY KEY, FOREIGN KEY working_values_id, FOREIGN KEY certified_values_id)''') 
+        """
+        WorkingValuesTable
+                
+        buildingValue INTEGER,
+        extraFeatureValue INTEGER,
+        landValue INTEGER,
+        landAgriculturalValue INTEGER,
+        
+        
+        """
+
         
         # Create debuging logg
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS DebugLoggingTable (id INTEGER PRIMARY KEY, logMessage TEXT)''')
@@ -154,7 +190,124 @@ class Database:
         self.cursor.execute("INSERT INTO DataSetTable (content, url, timestamp, dump, segment, image_urls) VALUES (?, ?, ?, ?, ?, ?)", (newContent, pageUrl, currentDateTime, GC.TODO_DUMP, GC.TODO_REAL_ESTATE_SEGMENT, jsonImageUrls))
         self.commit_changes()
  
+ 
+    def insert_owner_info_table(self, name: str, address: str, city: str, county: str, stateAbbrev: str, zipcode: int) -> int:
+        city = city.capitalize()
+        county = county.capitalize()
+        stateAbbrev = stateAbbrev.upper()
+        
+        self.cursor.execute("INSERT INTO OwnerInfoTable (contactName, streetAddress, city, county, state, postalCode) VALUES (?, ?, ?, ?, ?, ?)", (name, address, city, county, stateAbbrev, zipcode))
+        lastIdInserted = self.cursor.lastrowid
+        self.commit_changes()   
+        
+        return lastIdInserted
+    
+    
+    def insert_parcel_summary_table(self, id: str, desc: str, useCode: str, totalAcreage: float, isHomestead: str, stateAbbrev: str) -> int:
+        isHomestead = isHomestead.upper()
+        stateAbbrev = stateAbbrev.upper()
+        
+        id = ParcelId(id, stateAbbrev)
+        
+        self.cursor.execute("INSERT INTO ParcelSummaryTable (parcelId, description, propertyUseCode, acreage, homestead) VALUES (?, ?, ?, ?, ?)", (id.searchString, desc, useCode, totalAcreage, isHomestead))
+        lastIdInserted = self.cursor.lastrowid
+        self.commit_changes()   
+        
+        return lastIdInserted
 
+        
+    def insert_q_public_table(self, pageId: int, owner_tableId: int, parcel_tableId: int) -> int:
+        self.cursor.execute("INSERT INTO QPublicRecord (urlPageID, owner_info_id, parcel_summary_id) VALUES (?, ?, ?)", (pageId, owner_tableId, parcel_tableId))
+        lastIdInserted = self.cursor.lastrowid
+        self.commit_changes()   
+        
+        return lastIdInserted  
+
+
+    def get_QPublicRecord(self, columnValue: int, columnName: str= "id") -> list:
+        """ Get 
+
+        Args:
+            columnName (str): _description_
+            columnValue (int): _description_
+
+        Returns:
+            list: Of All Tables stored as foreign key in QPublicRecord table
+        """
+        ownerQuery = "SELECT owner_info_id from QPublicRecord WHERE " + columnName + "=" + str(columnValue)
+        parcelQuery = "SELECT parcel_summary_id from QPublicRecord WHERE " + columnName + "=" + str(columnValue)
+        allSubTables = []
+        
+        try:
+            ownerCursor = self.conn.execute(ownerQuery)
+            parcelCursor = self.conn.execute(parcelQuery)
+            
+            for dataTuple in ownerCursor:
+                ownerForeignKey = dataTuple[0]
+    
+            for dataTuple in parcelCursor:
+                parcelForeignKey = dataTuple[0] 
+                
+            allSubTables.append(self.get_OwnerInfoTable(["*"], ownerForeignKey))
+            allSubTables.append(self.get_ParcelSummaryTable(["*"], parcelForeignKey))
+                
+        except sqlite3.OperationalError:
+            db.insert_debug_logging_table(f'The {columnName} column name does NOT exist')
+            return []
+        
+        except UnboundLocalError:
+            db.insert_debug_logging_table(f'The {columnName} column name does NOT contain a value = {columnValue}')
+            return []
+        
+        return allSubTables
+        
+        
+    def get_OwnerInfoTable(self, columnNames: list, id: int) -> tuple:
+        """ Return specific columns of a PRIMARY KEY ID in the OwnerInfoTable
+
+        Args:
+            columnNames (list): Column data to return. Use * to get ALL columns
+            id (int): PRIMARY KEY ID 
+
+        Returns:
+            tuple: TODO
+        """
+        columns = ','.join(columnNames)
+        query = "SELECT " + columns + " from OwnerInfoTable WHERE id=" + str(id)
+        
+        try:
+            cursor = self.conn.execute(query)
+            for dataTuple in cursor: 
+                return dataTuple
+            
+        except sqlite3.OperationalError:
+            db.insert_debug_logging_table(f'At least one item in {columnNames} list does NOT exist in the OwnerInfoTable or has a typo')
+            return ()
+
+
+    def get_ParcelSummaryTable(self, columnNames: list, id: int) -> tuple:
+        """ Return specific columns of a PRIMARY KEY ID in the ParcelSummaryTable
+
+        Args:
+            columnNames (list): Column data to return. Use * to get ALL columns
+            id (int): PRIMARY KEY ID 
+
+        Returns:
+            tuple: TODO
+        """
+        columns = ','.join(columnNames)  
+        query = "SELECT " + columns + " from ParcelSummaryTable WHERE id=" + str(id)
+        
+        try:
+            cursor = self.conn.execute(query)
+            for dataTuple in cursor: 
+                return dataTuple
+            
+        except sqlite3.OperationalError:
+            db.insert_debug_logging_table(f'At least one item in {columnNames} list does NOT exist in the ParcelSummaryTable or has a typo')
+            return ()
+        
+    
     def insert_debug_logging_table(self, debugText: str):
         """ 
 
@@ -180,24 +333,52 @@ class Database:
         return results
 
 
+    def TEST_1(db):
+        """ db.query_table tests
+        """    
+        row = 1
+        data, isEmpty, isValid = db.query_table("DataSetTable", row, GC.IMAGE_URL_COLUMN_NUMBER)
+        print(data)
+        
+        row = 2
+        data, isEmpty, isValid = db.query_table("DataSetTable", row, GC.IMAGE_URL_COLUMN_NUMBER)
+        print(data)
+        
+        log, isEmpty, isValid = db.query_table("DebugLoggingTable")
+        if isValid and isEmpty: 
+            print("The DebugLoggingTable in MammothGPT.db is empty")
+        else:
+            print(log)
+
+            
+    def TEST_2(db):
+        
+        data = db.get_OwnerInfoTable(["contactName, city, county"], 1)
+        print(data)
+        
+        ownerInfoForeignKey = db.insert_owner_info_table("Blaze Sanders", "2924 Green Street", "Marianna", "Jackson", "FL", 32446)
+        data, isEmpty, isValid = db.query_table("OwnerInfoTable")
+        print(data)
+        
+        parcelSummaryForeignKey = db.insert_parcel_summary_table("01-2N-10-0000-0020-0000", "RUN E 280 FT TO BEGIN, RUN E 280 FT, N 330 FT, W 280 FT, S 330 FT TO POB...INGRESS/ EGRESS...OR 1434 P 52 D.I.E...", "MOBILE HOME 0200", 4.92, "Y", "FL")
+        data, isEmpty, isValid = db.query_table("ParcelSummaryTable")
+        print(data)    
+        
+        try:
+            db.insert_q_public_table(19999, ownerInfoForeignKey, parcelSummaryForeignKey)
+            db.insert_q_public_table(13353, 4, 4)
+            
+        except sqlite3.IntegrityError: 
+            db.insert_debug_logging_table(f'Foreign Key 4 does NOT exists in OwnerInfoTable') 
+    
+
 if __name__ == "__main__":
-    print("Testing MammothGPT.db using Database.py")
+    print("Testing MammothGPT Test.db using Database.py")
 
-    db = Database()
+    db = Database('Test.db')
+    primaryId = db.insert_q_public_table(12345, 1, 5)
+    data = db.get_QPublicRecord(primaryId)
+    print(data) 
     
-    row = 1
-    data, isEmpty, isValid = db.query_table("DataSetTable", row, GC.IMAGE_URL_COLUMN_NUMBER)
-    print(data)
-    
-    row = 2
-    data, isEmpty, isValid = db.query_table("DataSetTable", row, GC.IMAGE_URL_COLUMN_NUMBER)
-    print(data)
-    
-    log, isEmpty, isValid = db.query_table("DebugLoggingTable")
-    if isValid and isEmpty: 
-        print("The DebugLoggingTable in MammothGPT.db is empty")
-    else:
-        print(log)
-
     db.close_database()
     
