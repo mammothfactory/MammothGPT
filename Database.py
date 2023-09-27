@@ -67,7 +67,7 @@ class Database:
         
         # https://www.transportation.gov/sites/dot.gov/files/docs/mission/gis/national-address-database/308816/nad-schema-v1.pdf
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS OwnerInfoTable (id INTEGER PRIMARY KEY, contactName TEXT, streetAddress TEXT, city TEXT, county TEXT, state CHAR(2), postalCode INTEGER)''')
-        self.cursor.execute('''CREATE TABLE IF NOT EXISTS ParcelSummaryTable (id INTEGER PRIMARY KEY, parcelId TEXT, description TEXT, propertyUseCode TEXT, acreage REAL, homestead CHAR(1))''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS ParcelSummaryTable (id INTEGER PRIMARY KEY, parcelId TEXT, parcelAddress TEXT, description TEXT, propertyUseCode TEXT, acreage REAL, homestead CHAR(1), link TEXT)''')
         #TODO self.cursor.execute('''CREATE TABLE IF NOT EXISTS SalesTable (id INTEGER PRIMARY KEY, saleDate TEXT, salePrice INTEGER, qualification CHAR(1),  vacant CHAR(1),  grantor TEXT,  grantee TEXT)''')
         #TODO self.cursor.execute('''CREATE TABLE IF NOT EXISTS ValuationTable (id INTEGER PRIMARY KEY, FOREIGN KEY working_values_id, FOREIGN KEY certified_values_id)''') 
         """
@@ -192,9 +192,9 @@ class Database:
  
  
     def insert_owner_info_table(self, name: str, address: str, city: str, county: str, stateAbbrev: str, zipcode: int) -> int:
-        city = city.capitalize()
-        county = county.capitalize()
-        stateAbbrev = stateAbbrev.upper()
+        city = city.title()                 # All words capitalized 
+        county = county.title()             # All words capitalized 
+        stateAbbrev = stateAbbrev.upper()   # All letters capitalized
         
         self.cursor.execute("INSERT INTO OwnerInfoTable (contactName, streetAddress, city, county, state, postalCode) VALUES (?, ?, ?, ?, ?, ?)", (name, address, city, county, stateAbbrev, zipcode))
         lastIdInserted = self.cursor.lastrowid
@@ -203,13 +203,13 @@ class Database:
         return lastIdInserted
     
     
-    def insert_parcel_summary_table(self, id: str, desc: str, useCode: str, totalAcreage: float, isHomestead: str, stateAbbrev: str) -> int:
+    def insert_parcel_summary_table(self, id: str, adress: str, desc: str, useCode: str, totalAcreage: float, isHomestead: str, stateAbbrev: str, mapLink: str) -> int:
         isHomestead = isHomestead.upper()
         stateAbbrev = stateAbbrev.upper()
         
-        id = ParcelId(id, stateAbbrev)
-        
-        self.cursor.execute("INSERT INTO ParcelSummaryTable (parcelId, description, propertyUseCode, acreage, homestead) VALUES (?, ?, ?, ?, ?)", (id.searchString, desc, useCode, totalAcreage, isHomestead))
+        #id = ParcelId(id, stateAbbrev)
+        #id.searchString
+        self.cursor.execute("INSERT INTO ParcelSummaryTable (parcelId, parcelAddress, description, propertyUseCode, acreage, homestead, link) VALUES (?, ?, ?, ?, ?, ?, ?)", (id, adress, desc, useCode, totalAcreage, isHomestead, mapLink))
         lastIdInserted = self.cursor.lastrowid
         self.commit_changes()   
         
@@ -360,7 +360,7 @@ class Database:
         data, isEmpty, isValid = db.query_table("OwnerInfoTable")
         print(data)
         
-        parcelSummaryForeignKey = db.insert_parcel_summary_table("01-2N-10-0000-0020-0000", "RUN E 280 FT TO BEGIN, RUN E 280 FT, N 330 FT, W 280 FT, S 330 FT TO POB...INGRESS/ EGRESS...OR 1434 P 52 D.I.E...", "MOBILE HOME 0200", 4.92, "Y", "FL")
+        parcelSummaryForeignKey = db.insert_parcel_summary_table("01-2N-10-0000-0020-0000", "RUN E 280 FT TO BEGIN, RUN E 280 FT, N 330 FT, W 280 FT, S 330 FT TO POB...INGRESS/ EGRESS...OR 1434 P 52 D.I.E...", "MOBILE HOME 0200", 4.92, "Y", "FL", "https://beacon.schneidercorp.com/Application.aspx?AppID=851&LayerID=15884&PageTypeID=1&PageID=7080&Q=57980097&KeyValue=01-2N-12-0373-00B0-0140")
         data, isEmpty, isValid = db.query_table("ParcelSummaryTable")
         print(data)    
         
