@@ -5,3 +5,7 @@ gpullm/
 __pycache__/
 .DS_Store
 MammothGPT.db
+/offload
+/workspace
+.ipynb_checkpoints
+.vscode
