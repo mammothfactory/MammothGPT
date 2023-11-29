@@ -1,6 +1,6 @@
 Column Name,Name,Type,Tier,Examples,Description
 ogc_fid,Object ID,serial primary key,standard,"",""
-geoid,FIPS Code,text,standard,"","FIPS code (state + county FIPS codes)"
+geoid,FIPS Code,text,standard,"","Federal Information Processing Standards (FIPS) codes (state + county FIPS codes)"
 sourceagent,Source Agent,text,standard,"",""
 parcelnumb,Parcel ID,text,standard,"02004940, 001-020-4624-001","The assessor's primary parcel identification number or code."
 parcelnumb_no_formatting,Parcel ID without Formatting,text,standard,"02004940, 0010204624001","The primary parcel identification number with spaces and formatting characters removed."
