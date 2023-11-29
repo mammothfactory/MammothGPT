@@ -6,9 +6,9 @@ from time import sleep
 import random
 
 # Using the Jackson County Property Appraiser's office info what are the standard acreage sizes?
-What county in Florida has the lowest tax rate?
-What property type in Holmes County is selling quickest?
-What is the average cost of single-family home in Holmes County, Florida?
+#What county in Florida has the lowest tax rate?
+#What property type in Holmes County is selling quickest?
+#What is the average cost of single-family home in Holmes County, Florida?
 import requests
 from bs4 import BeautifulSoup
 
